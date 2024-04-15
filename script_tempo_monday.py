@@ -127,7 +127,8 @@ class CallWorklogInTempoServer:
 
         if response.status_code==200:
             
-            xml_content = response.text            
+            xml_content = response.text        
+            print(xml_content)    
             #worklog_server = self.parse_xml(response)            
             return xml_content
         else:     
@@ -247,12 +248,25 @@ class Account:
 summary_accounts:List[Account] = []
 
 def add_or_update_account(worklog):
-    # La cuenta no existe, agregar nueva cuenta
-    billing_element = worklog.find('Billing')   
-
-    name_value = billing_element.get('name')
-
-    existing_account = next((acc for acc in summary_accounts if acc.name_account == name_value), None)
+    billing_element = worklog.find('Billing')
+    if billing_element is not None:
+        # El elemento 'Billing' está presente, intenta obtener el valor de 'name'
+        name_value = billing_element.get('name')
+        if name_value is not None:
+            # Se encontró el valor de 'name', continuar con el procesamiento
+            print(name_value)
+            existing_account = next((acc for acc in summary_accounts if acc.name_account == name_value), None)
+            # Resto del código para agregar o actualizar la cuenta existente
+        else:
+            # El valor de 'name' no está presente en el elemento 'Billing'
+            print("El valor 'name' no está presente en el elemento 'Billing'")
+            # Continuar con otro manejo o simplemente omitir este trabajo
+            existing_account = None;
+    else:
+        # El elemento 'Billing' no está presente en el trabajo actual
+        print("El elemento 'Billing' no está presente en el trabajo actual")
+        existing_account = None;
+        # Continuar con otro manejo o simplemente omitir este trabajo
 
     # Aislar el mes de cada carga de horas
     month_worklog = datetime.strptime(worklog.find('work_date').text, "%Y-%m-%d")
@@ -605,7 +619,7 @@ async def main():
     callWorklogs = CallWorklogInTempoServer()
     allWorklogsXml = await callWorklogs.CallWorklogInServer()
     root = ET.fromstring(allWorklogsXml)
-    list_worklogs=root.findall('worklog')
+    list_worklogs=root.findall('.//worklog[Billing]')
     
     for worklog in list_worklogs:
         add_or_update_account(worklog=worklog)  
